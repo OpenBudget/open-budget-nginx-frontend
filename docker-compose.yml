@@ -1,0 +1,138 @@
+version: "3"
+
+services:
+
+  budgetkey-postgres:
+    image: budgetkey/budgetkey-postgres:latest
+    ports:
+    - 5432:5432
+    volumes:
+    # /mnt/budgetkey-persistent-data/db
+    - postgresql-data-db:/var/lib/postgresql/data/db
+    environment:
+    - POSTGRES_DB=budgetkey
+    - POSTGRES_USER=budgetkey
+    - POSTGRES_PASSWORD=123456
+    - PGDATA=/var/lib/postgresql/data/db
+    - PG_VERSION=9.6.2
+
+  open-budget-elasticsearch:
+    image: budgetkey/open-budget-elasticsearch:latest
+    ports:
+    - 9200:9200
+    - 9300:9300
+    volumes:
+    - elasticsearch-data:/usr/share/elasticsearch/data
+    environment:
+    - ELASTICSEARCH_ANALYSIS_HEBREW_VERSION=5.3.0
+    - ES_JAVA_OPTS=-Xms2g -Xmx2g
+    - xpack.security.enabled=false
+
+  open-budget-data-api:
+    image: budgetkey/open-budget-data-api:latest
+    depends_on:
+    - budgetkey-postgres
+    environment:
+    - DATABASE_URL=postgresql://budgetkey:123456@budgetkey-postgres/budgetkey
+    - DB_DB=obudget
+    - DB_HOST=budgetkey-postgres
+    - DB_PORT=5432
+    - DB_PWD=123456
+    - DB_USER=budgetkey
+    # - SERVER_NAME=next.obudget.org
+
+  open-budget-search-api:
+    image: budgetkey/open-budget-search-api:latest
+    depends_on:
+    - budgetkey-postgres
+    - open-budget-elasticsearch
+    environment:
+    - DB_DB=obudget
+    - DB_HOST=budgetkey-postgres
+    - DB_PORT=5432
+    - DB_PWD=123456
+    - DB_USER=budgetkey
+    - ES_HOST=open-budget-elasticsearch
+    - ES_PORT=9200
+    - INDEX_NAME=budgetkey
+
+  budgetkey-data-pipelines:
+    image: budgetkey/budgetkey-data-pipelines:latest
+    volumes:
+    - fonts:/var/_fonts
+    - datapackages:/var/datapackages
+    # /mnt/budgetkey-persistent-data/redis
+    - pipelines-redis:/var/redis
+    # /mnt/budgetkey-persistent-data/.ssh
+    - dpp-ssh:/home/dpp/.ssh
+    environment:
+    - BUDGETKEY_OLD_DB=
+    - DATABASE_URL=postgresql://budgetkey:123456@budgetkey-postgres/budgetkey
+    - DPP_DB_ENGINE=postgresql://budgetkey:123456@budgetkey-postgres/budgetkey
+    - DPP_ELASTICSEARCH=open-budget-elasticsearch:9200
+    - GITHUB_AUTH_TOKEN=
+    - DPP_REDIS_HOST=localhost
+
+  budgetkey-app-main-page:
+    image: budgetkey/budgetkey-app-main-page:feature-main_page
+
+  budgetkey-app-generic-item:
+    image: budgetkey/budgetkey-app-generic-item:latest
+    environment:
+    - BASE_PATH=/i/
+
+  budgetkey-app-search:
+    image: budgetkey/budgetkey-app-search:latest
+
+  kibana:
+    image: kibana:5.3
+
+  govbuy-theme:
+      image: orihoch/open-procure
+      volumes:
+      - ./govbuy-theme:/app/dist/assets
+
+  budgetkey-app-generic-item-govbuy:
+    image: budgetkey/budgetkey-app-generic-item:latest
+    depends_on:
+    - govbuy-theme
+    environment:
+    - BASE_PATH=/govbuy/i/
+    volumes:
+    # /mnt/budgetkey-persistent-data/govbuy-theme/theme.js
+    - ./govbuy-theme/theme.js:/app/dist/assets/theme.js
+
+  budgetkey-app-search-govbuy:
+    image: orihoch/budgetkey-app-search:themes-support
+    depends_on:
+    - govbuy-theme
+    volumes:
+    # /mnt/budgetkey-persistent-data/govbuy-theme/theme.js
+    - ./govbuy-theme/theme.js:/app/dist/assets/theme.js
+
+  nginx:
+    build: .
+    image: budgetkey/open-budget-nginx-frontend:latest
+    depends_on:
+    - open-budget-search-api
+    - open-budget-data-api
+    - budgetkey-app-search
+    - budgetkey-app-search-govbuy
+    - budgetkey-app-generic-item
+    - budgetkey-app-generic-item-govbuy
+    - budgetkey-data-pipelines
+    - budgetkey-app-main-page
+    ports:
+    - 80:80
+    - 5601:5601
+    volumes:
+    - fonts:/var/_fonts
+    - datapackages:/var/datapackages
+
+volumes:
+  postgresql-data-db:
+  elasticsearch-data:
+  pipelines-redis:
+  dpp-ssh:
+  fonts:
+  datapackages:
