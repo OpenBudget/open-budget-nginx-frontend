@@ -1,9 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "HELLO WORLD!"
-ls -la /var/datapackages 
-chmod 777 /var/datapackages 
+service amplify-agent start > /dev/null 2>&1
 
 echo "NGINX STARTING"
 nginx -g "daemon off;"
