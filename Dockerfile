@@ -1,17 +1,11 @@
-FROM sickp/alpine-nginx
+FROM nginx:1.17
 
-ADD *.conf /etc/nginx/
-ADD *.htpasswd /etc/nginx/
-ADD conf.d/* /etc/nginx/conf.d/
-ADD startup.sh /startup.sh
+COPY _fonts /var/_fonts
 
-ADD 500.html /usr/share/nginx/errors/500.html
-
-RUN mkdir /var/datapackages && chown -R nginx:nginx /var/datapackages
-VOLUME ["/var/datapackages"]
-VOLUME ["/var/_fonts"]
-
-EXPOSE 80
-
-# We need to wait for the internal dns resolving to kick in
-CMD /startup.sh
+ARG AMPLIFY_API_KEY
+RUN echo 'APT::Get::Assume-Yes "true";' >> /etc/apt/apt.conf
+RUN apt-get update 
+RUN apt-get install -y curl python gnupg
+RUN curl -L -O https://github.com/nginxinc/nginx-amplify-agent/raw/master/packages/install.sh
+RUN API_KEY=$AMPLIFY_API_KEY sh ./install.sh
+RUN update-rc.d amplify-agent defaults

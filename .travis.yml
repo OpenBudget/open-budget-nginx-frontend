@@ -2,20 +2,26 @@ language: bash
 sudo: required
 env:
   global:
-    - K8S_OPS_REPO_BRANCH=master
-    - K8S_OPS_REPO_SLUG=OpenBudget/budgetkey-k8s
-    - DOCKER_IMAGE=budgetkey/open-budget-nginx-frontend
-    - DEPLOY_YAML_UPDATE_FILE=values.auto-updated.yaml
-    - DEPLOY_VALUES_CHART_NAME=nginx
-    - DEPLOY_VALUES_IMAGE_PROP=image
-    - DEPLOY_COMMIT_MESSAGE="automatic update of open-budget-nginx-frontend"
-    - DEPLOY_GIT_EMAIL=budgetkey-deployer@null.void
-    - DEPLOY_GIT_USER=budgetkey-deployer
+  - K8S_OPS_REPO_BRANCH=master
+  - K8S_OPS_REPO_SLUG=OpenBudget/budgetkey-k8s
+  - DOCKER_IMAGE=budgetkey/open-budget-nginx-frontend
+  - DEPLOY_YAML_UPDATE_FILE=values.auto-updated.yaml
+  - DEPLOY_VALUES_CHART_NAME=nginx
+  - DEPLOY_VALUES_IMAGE_PROP=image
+  - DEPLOY_COMMIT_MESSAGE="automatic update of open-budget-nginx-frontend"
+  - DEPLOY_GIT_EMAIL=budgetkey-deployer@null.void
+  - DEPLOY_GIT_USER=budgetkey-deployer
+  - secure: SMTjpIm4/H1GNTZHZiS6CgpyaGqijQYQXbqRCDw58BnjgRnyqzH6Go3ez3k/a8U+T6SaAYaenEGJ0hit3s8qqE//ptunJwRs4MZ81fsN29k6OxpN3jExJPSn9CumHJZwgIRQJ75wYzw9XOhDSeXWDAVoMAUiMIGFcY+UdOIPGSQY9ixl6LgwQasvNXsZUt0d0k2MEzupNLNnf6hIUk3UerQCr3L0dLJO0pCdyp9hfK/vi3AswqtQQDsk8s6hqp3ZIbe8nOME+7XYf4KqOuL99T2OfRHsBiCSAphm5FKu/uPtojslE9SxUceaJ1OF5OVcbP7H6WfwIFWdlazdATR6OxqSU9jn86Mu68jSxDr3NRDKwxK9yZCt8/+uAzlpetcnSCsHKYbcjpui9tEJ8lKgfFQB3nbeEXGh1HnucxV2Dny+UjWH91lSInVEV2VaDQbR58TFrMjXflUihu1D7CBbICbS3zs9fqB8Fn25CIpkyiSATrTn+xXQ7FuglGFKCDFZfDfgXwikAb3aj/sLWupe5ukFM35cH/qPFhraj7nSmAl1r8FpOcOSs8JUb9Pp4U/Kf4ZGBXPWQDwp0GK3IXXjpTW5nAULV7RweVUjxxsvJAw6O7tbwdwQSyS11CNe1fSGkjJYpjfwH0J4X6tbu1aFeTn1SPoYw2a6dUDSFXhtTN0=
 services:
-  - docker
+- docker
+before_install:
+- openssl aes-256-cbc -K $encrypted_46530dc07d73_key -iv $encrypted_46530dc07d73_iv
+  -in fonts.tgz.enc -out fonts.tgz -d
+- tar -xzf fonts.tgz
 script:
-  - curl -s https://raw.githubusercontent.com/OpenBudget/budgetkey-k8s/master/apps_travis_script.sh > .travis.sh
-  - bash .travis.sh script
+- curl -s https://raw.githubusercontent.com/OpenBudget/budgetkey-k8s/master/apps_travis_script.sh > .travis.sh
+- docker pull "${DOCKER_IMAGE}:latest"
+- docker build --cache-from "${DOCKER_IMAGE}:latest" --build-arg AMPLIFY_API_KEY -t "${DOCKER_IMAGE}:latest" .
 deploy:
   skip_cleanup: true
   provider: script
