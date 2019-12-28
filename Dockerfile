@@ -11,6 +11,7 @@ RUN API_KEY=$AMPLIFY_API_KEY sh ./install.sh
 RUN update-rc.d amplify-agent defaults
 RUN update-rc.d amplify-agent enable
 RUN cat /etc/amplify-agent/agent.conf | sed s/hostname\ =/hostname=budgetkey-nginx/ > /etc/amplify-agent/agent2.conf && mv /etc/amplify-agent/agent2.conf /etc/amplify-agent/agent.conf
+RUN rm /var/log/nginx/*
 
 COPY startup.sh /
 
